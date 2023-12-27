@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <title>Scheduling Algorithm</title>
+</head>
+<style>
+ span{
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-weight: bolder;
+  text-decoration: underline;
+ }
+ 
+ .container{
+  border: 1px solid black;
+  padding: 10px;
+  border-radius: 10px;
+  background: black;
+  color: white;
+  box-shadow: 10px 10px 10px gray;
+ }
+ #ganttChart {
+    display: flex;
+    margin-top: 10px;
+   
+ 
+}
+
+.gantt-cell {
+    border: 1px solid #000;
+    text-align: center;
+    
+}
+#value,#value2,#value3,#value4,#value5,#value6,#value7,#value8,#value9,#value10{
+  width: 100px;
+}
+#value{
+  margin-left: 74px;
+}
+#average{
+    display: inline;
+}
+#resultArea{
+    margin: 0px 280px 0px 280px;
+    border: 1px solid black;
+  padding: 10px;
+  border-radius: 10px;
+  background: gray;
+  color: white;
+
+}
+
+</style>
+<body>
+
+<div class="container mt-5">
+    <h2 class="btn btn-primary">Fcfs  Cpu Scheduling</h2>
+    <div class="form-group">
+        <h5>Enter the number of processes :</h5>
+        <input type="number" class="form-control" id="processCount">
+    </div>
+
+    <div id="inputForm" class="d-none">
+        <h4 class="mt-4 mb-2 d-inline">Arrival Time :</h4>
+        <h4 class="mt-4 mb-2 d-inline" style="margin-left: 440px;">Burst Time :</h4>
+
+        <div id="inputFields"></div>
+        <button class="btn btn-outline-primary mt-3" onclick="runAlgorithm()">Calculate</button>
+    </div>
+
+    <div >RQ: <span class="badge bg-primary text-white mt-4" id="ready_queue"></span></div>
+
+        <div id="ganttChart" class="mt-4">
+          <h5 class="badge bg-dark text-white " >Gantt Chart :</h5>
+          <div id="gantt-cell "></div> 
+        </div>
+
+        <div style="display: flex;">
+          <div id="value"></div>
+          <div id="value2"></div>
+          <div id="value3"></div>
+          <div id="value4"></div>
+          <div id="value5"></div>
+          <div id="value6"></div>
+          <div id="value7"></div>
+          <div id="value8"></div>
+          <div id="value9"></div>
+          <div id="value10"></div>
+          <div id="value11"></div>
+        </div>
+        
+        
+</div>
+<div id="resultArea" class=" mt-4" >
+    <h5 class="badge bg-dark text-white">Results :</h5>
+    <pre id="results" ></pre>
+    
+    <h5 id="average" class="badge bg-dark text-white">Averages :</h5>
+    <div>Completion Time : <span class="badge bg-primary text-white" id="completion_time"></span></div>
+    <div>Turn around Time Time : <span class="badge bg-primary text-white" id="turn_around_time"></span></div>
+    <div>Waiting Time : <span class="badge bg-primary text-white" id="waiting_time"></span></div>
+  <div>Response Time <span class="badge bg-primary text-white" id="response_time"></span></div>
+</div>
+
+<script>
+    class Process {
+        constructor() {
+            this.at = 0; // arrival time
+            this.bt = 0; // burst time
+            this.ct = 0; // completion time
+            this.tat = 0; // turn around time
+            this.wt = 0; // waiting time
+            this.rt = 0; // response time
+            this.pid = 0; // process ID
+        }
+
+        getVar(varName) {
+            return this[varName];
+        }
+
+        setVar(varName, value) {
+            this[varName] = value;
+        }
+
+        updateAfterCt() {
+            this.tat = this.ct - this.at;
+            this.wt = this.tat - this.bt;
+            this.rt = this.wt; // Response time is considered equal to waiting time
+        }
+
+        display() {
+    // Display output
+    const resultArea = document.getElementById('results');
+    resultArea.innerHTML += `${this.pid}\t${this.at}\t${this.bt}\t${this.ct}\t${this.tat}\t${this.wt}\t${this.rt}\n`;
+    resultArea.style.width = '1000px';
+    resultArea.style.border = '1px solid white';
+    resultArea.style.padding = '10px';
+    resultArea.style.marginLeft = '70px';
+    resultArea.style.textAlign = 'center';
+    resultArea.style.color = 'white';
+    resultArea.style.fontSize = '20px';
+    // Display ready_queue
+    const ready_queue = document.getElementById('ready_queue');
+    ready_queue.innerHTML += `P${this.pid},`;
+        
+    // Display Gantt chart
+    const ganttChart = document.getElementById('ganttChart');
+    const ganttCell = document.createElement('div');
+    ganttCell.className = 'gantt-cell';
+    ganttCell.style.width = `100px`; // Adjust the width as needed
+    ganttCell.innerHTML = `P${this.pid}`;
+    ganttChart.appendChild(ganttCell);
+    ganttCell.style.borderColor = 'white'    
+   
+}
+     
+    }
+
+    function average(processes, varName) {
+        const total = processes.reduce((acc, process) => acc + process.getVar(varName), 0);
+        return total / processes.length;
+    }
+
+    function createInputFields(processCount) {
+        const inputFields = document.getElementById('inputFields');
+        inputFields.innerHTML = '';
+
+        for (let i = 0; i < processCount; i++) {
+            const processDiv = document.createElement('div');
+            processDiv.className = 'form-row';
+
+            const arrivalInput = document.createElement('input');
+            arrivalInput.type = 'number';
+            arrivalInput.className = 'form-control col';
+            arrivalInput.placeholder = `Process ${i+1} Arrival Time` ;
+            arrivalInput.id = `arrival${i}`;
+            arrivalInput.style.marginRight = '5px';
+            arrivalInput.style.marginTop = '7px';
+
+            const burstInput = document.createElement('input');
+            burstInput.type = 'number';
+            burstInput.className = 'form-control col';
+            burstInput.placeholder = 'Burst Time';
+            burstInput.id = `burst${i}`;
+            burstInput.style.marginTop = '7px';
+
+            processDiv.appendChild(arrivalInput);
+            processDiv.appendChild(burstInput);
+            inputFields.appendChild(processDiv);
+
+            
+        }
+
+        document.getElementById('inputForm').classList.remove('d-none');
+    }
+
+   function runAlgorithm() {
+    const processCount = parseInt(document.getElementById('processCount').value);
+
+    if (isNaN(processCount) || processCount <= 0) {
+        alert('Please enter a valid number of processes.');
+        return;
+    }
+
+    const processes = [];
+    let counter = 1; // Start process IDs from 1
+    let minArrivalTime = Infinity;
+    let processWithMinArrivalTime = null;
+
+    for (let i = 0; i < processCount; i++) {
+        const temp = new Process();
+        temp.setVar('pid', counter++);
+        temp.setVar('at', parseInt(document.getElementById(`arrival${i}`).value));
+        temp.setVar('bt', parseInt(document.getElementById(`burst${i}`).value));
+        processes.push(temp);
+
+        // Update the minimum arrival time and corresponding process
+        if (temp.getVar('at') < minArrivalTime) {
+            minArrivalTime = temp.getVar('at');
+            processWithMinArrivalTime = temp;
+        }
+    }
+
+    // Sort processes based on arrival time
+    processes.sort((first, second) => first.getVar('at') - second.getVar('at'));
+
+    const resultArea = document.getElementById('results');
+    resultArea.innerHTML = 'pid\tat\tbt\tct\ttat\twt\trt\n';
+
+    processes[0].setVar('ct', processes[0].getVar('at') + processes[0].getVar('bt'));
+    processes[0].updateAfterCt();
+    processes[0].display();
+
+    for (let i = 1; i < processes.length; i++) {
+        if (processes[i].getVar('at') < processes[i - 1].getVar('ct')) {
+            processes[i].setVar('ct', processes[i - 1].getVar('ct') + processes[i].getVar('bt'));
+        } else {
+            processes[i].setVar('ct', processes[i].getVar('at') + processes[i].getVar('bt'));
+        }
+
+        processes[i].updateAfterCt();
+        processes[i].display();
+    }
+
+    document.getElementById('completion_time').innerHTML = `${average(processes, 'ct').toFixed(1)}`;
+    document.getElementById('turn_around_time').innerHTML = `${average(processes, 'tat').toFixed(1)}`;
+    document.getElementById('waiting_time').innerHTML = `${average(processes, 'wt').toFixed(1)}`;
+    document.getElementById('response_time').innerHTML = `${average(processes, 'rt').toFixed(1)}`;
+
+        // Display the minimum arrival time   
+        // One
+         document.getElementById('value').innerHTML = ` ${minArrivalTime}`;
+        document.getElementById('value2').innerHTML = `${processWithMinArrivalTime.getVar('bt')}`;  
+
+        // Sort processes based on arrival time  3
+        processes.sort((first, second) => first.getVar('at') - second.getVar('at'));
+
+        // Two
+        const processWithSecondLowestArrivalTime = processes[1];
+        const value3 =   document.getElementById('value3').innerHTML = `${processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')}`;
+
+        // Three
+        const processWithThirdLowestArrivalTime = processes[2];
+        document.getElementById('value4').innerHTML = `${processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+
+        // Fourth
+        const processWithFourthLowestArrivalTime = processes[3];
+        document.getElementById('value5').innerHTML = `${processWithFourthLowestArrivalTime.getVar('bt') + processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+       
+        // Five
+        const processWithFifthLowestArrivalTime = processes[4];
+        document.getElementById('value6').innerHTML = `${processWithFifthLowestArrivalTime.getVar('bt')+processWithFourthLowestArrivalTime.getVar('bt') + processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+        
+        // Sixth
+        const processWithSixthLowestArrivalTime = processes[5];
+        document.getElementById('value7').innerHTML = `${processWithSixthLowestArrivalTime.getVar('bt')+processWithFifthLowestArrivalTime.getVar('bt')+processWithFourthLowestArrivalTime.getVar('bt') + processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+        
+        //Seven
+        const processWithSevenLowestArrivalTime = processes[6];
+        document.getElementById('value8').innerHTML = `${processWithSevenLowestArrivalTime.getVar('bt')+processWithSixthLowestArrivalTime.getVar('bt')+processWithFifthLowestArrivalTime.getVar('bt')+processWithFourthLowestArrivalTime.getVar('bt') + processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+
+        //Eight
+        const processWithEightLowestArrivalTime = processes[7];
+        document.getElementById('value9').innerHTML = `${processWithEightLowestArrivalTime.getVar('bt')+processWithSevenLowestArrivalTime.getVar('bt')+processWithSixthLowestArrivalTime.getVar('bt')+processWithFifthLowestArrivalTime.getVar('bt')+processWithFourthLowestArrivalTime.getVar('bt') + processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+
+        // Nine
+        const processWithNineLowestArrivalTime = processes[8];
+        document.getElementById('value10').innerHTML = `${processWithNineLowestArrivalTime.getVar('bt')+processWithEightLowestArrivalTime.getVar('bt')+processWithSevenLowestArrivalTime.getVar('bt')+processWithSixthLowestArrivalTime.getVar('bt')+processWithFifthLowestArrivalTime.getVar('bt')+processWithFourthLowestArrivalTime.getVar('bt') + processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+        
+        // Ten
+        const processWithTenLowestArrivalTime = processes[9];
+        document.getElementById('value11').innerHTML = `${processWithTenLowestArrivalTime.getVar('bt')+processWithNineLowestArrivalTime.getVar('bt')+processWithEightLowestArrivalTime.getVar('bt')+processWithSevenLowestArrivalTime.getVar('bt')+processWithSixthLowestArrivalTime.getVar('bt')+processWithFifthLowestArrivalTime.getVar('bt')+processWithFourthLowestArrivalTime.getVar('bt') + processWithMinArrivalTime.getVar('bt')+ processWithSecondLowestArrivalTime.getVar('bt')+ processWithThirdLowestArrivalTime.getVar('bt')}`;
+}        
+
+    
+    document.getElementById('processCount').addEventListener('input', function () {
+        createInputFields(this.value);
+         });
+    
+
+    
+</script>
+
+</body>
+</html>
